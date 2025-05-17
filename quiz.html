@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quiz Viewer</title>
-<style>
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    padding: 20px;
-    font-size: 24px;
-    background: #f9f9f9;
-    max-width: 700px;
-    margin: auto;
-  }
-  #domanda { font-weight: bold; margin-bottom: 10px; }
-  #paragrafo { font-style: italic; margin-bottom: 20px; color: #555; }
-  .opzione { display: block; padding: 10px; margin: 10px 0; font-size: 20px; cursor: pointer; }
-  button.nav-btn { padding: 10px 20px; font-size: 20px; margin: 15px 10px 0 0; }
-  #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
-  #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
-  #resetBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz Viewer</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 20px;
+      font-size: 24px;
+      background: #f9f9f9;
+      max-width: 700px;
+      margin: auto;
+    }
+    #domanda { font-weight: bold; margin-bottom: 10px; }
+    #paragrafo { font-style: italic; margin-bottom: 20px; color: #555; }
+    .opzione { display: block; padding: 10px; margin: 10px 0; font-size: 20px; cursor: pointer; }
+    button.nav-btn { padding: 10px 20px; font-size: 20px; margin: 15px 10px 0 0; }
+    #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
+    #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
+    #resetBtn, #ripassoBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
+  </style>
 </head>
 <body>
 
@@ -38,17 +38,20 @@
     ❌ Sbagliate: <span id="sbagliate">0</span>
   </div>
   <button id="resetBtn" onclick="resetStatistiche()">Reset Statistiche</button>
+  <button id="ripassoBtn" onclick="iniziaRipasso()">Ripasso</button>
 </div>
 
 <script>
 const quizTxtURL = "https://dl.dropboxusercontent.com/scl/fi/it9x9ji11mudqw0hivsmq/29-39conpunto.txt?rlkey=znlx3atviv8j97wp4uqani148&st=60d08g1w&dl=1";
 
 let domande = [];
+let domandeSbagliate = [];
 let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
+let tempoRimanente = 30 * 60;
 let timerInterval;
-let tempoRimanente = 30 * 60; // 30 minuti
+let inRipasso = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadQuiz();
@@ -57,16 +60,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function loadQuiz() {
   fetch(quizTxtURL)
-    .then(r => {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.text();
-    })
+    .then(r => r.text())
     .then(text => {
       domande = parseQuiz(text);
-      if (domande.length === 0) {
-        document.getElementById("domanda").textContent = "Nessuna domanda trovata.";
-        return;
-      }
       showQuestion(0);
     })
     .catch(err => {
@@ -90,44 +86,39 @@ function parseQuiz(text) {
   });
   if (buf.length) blocchi.push(buf);
 
-  return blocchi.map((b, idx) => {
-    let domanda = b[0].replace(/^\d+\.\s*/, "");
+  return blocchi.map(b => {
+    const domanda = b[0].replace(/^\d+\.\s*/, "");
     let paragrafo = "";
     let opzioni = { A: "", B: "", C: "", D: "" };
     let answer = "";
 
-    b.forEach(line => {
-      if (/^answer:/i.test(line)) {
+    for (const line of b) {
+      if (line.toLowerCase().startsWith("answer:")) {
         answer = line.split(":")[1].trim().toUpperCase();
-      } else if (/^A\./i.test(line)) {
-        opzioni.A = line.substring(2).trim();
-      } else if (/^B\./i.test(line)) {
-        opzioni.B = line.substring(2).trim();
-      } else if (/^C\./i.test(line)) {
-        opzioni.C = line.substring(2).trim();
-      } else if (/^D\./i.test(line)) {
-        opzioni.D = line.substring(2).trim();
       }
-    });
+    }
 
-    if (b.length > 1 && !/^([ABCD]\.)/i.test(b[1]) && !/^answer:/i.test(b[1])) {
+    for (const line of b) {
+      if (/^A\./i.test(line)) opzioni.A = line.substring(2).trim();
+      else if (/^B\./i.test(line)) opzioni.B = line.substring(2).trim();
+      else if (/^C\./i.test(line)) opzioni.C = line.substring(2).trim();
+      else if (/^D\./i.test(line)) opzioni.D = line.substring(2).trim();
+    }
+
+    if (b.length > 1 && !/^([ABCD]\.)/i.test(b[1]) && !b[1].toLowerCase().startsWith("answer:")) {
       paragrafo = b[1];
     }
 
-    return {
-      domanda: `${idx + 1}. ${domanda}`,
-      paragrafo,
-      opzioni,
-      answer
-    };
+    return { domanda, paragrafo, opzioni, answer };
   });
 }
 
 function showQuestion(i) {
-  if (i < 0 || i >= domande.length) return;
+  const source = inRipasso ? domandeSbagliate : domande;
+  if (i < 0 || i >= source.length) return;
   currentIndex = i;
-  const q = domande[i];
-  document.getElementById("domanda").textContent = q.domanda;
+  const q = source[i];
+  document.getElementById("domanda").textContent = `${i + 1}. ${q.domanda}`;
   document.getElementById("paragrafo").textContent = q.paragrafo;
   const opDiv = document.getElementById("opzioni");
   opDiv.innerHTML = "";
@@ -136,19 +127,23 @@ function showQuestion(i) {
     const btn = document.createElement("button");
     btn.className = "opzione";
     btn.innerHTML = `<strong>${lett}.</strong> ${testo}`;
-    btn.onclick = () => checkAnswer(lett);
+    btn.onclick = () => checkAnswer(lett.toUpperCase());
     opDiv.appendChild(btn);
   });
 }
 
 function checkAnswer(sc) {
-  const giusta = domande[currentIndex].answer.toUpperCase();
-  if (sc.toUpperCase() === giusta) {
+  const source = inRipasso ? domandeSbagliate : domande;
+  const giusta = source[currentIndex].answer;
+  if (sc === giusta) {
     corrette++;
     alert("✅ Corretto!");
   } else {
     sbagliate++;
     alert("❌ Sbagliato! Risposta giusta: " + giusta);
+    if (!inRipasso) {
+      domandeSbagliate.push(source[currentIndex]);
+    }
   }
   updateStats();
 }
@@ -161,15 +156,29 @@ function updateStats() {
 function resetStatistiche() {
   corrette = 0;
   sbagliate = 0;
+  domandeSbagliate = [];
+  inRipasso = false;
   updateStats();
+  showQuestion(0);
 }
 
 function avanti() {
-  if (currentIndex < domande.length - 1) showQuestion(currentIndex + 1);
+  const source = inRipasso ? domandeSbagliate : domande;
+  if (currentIndex < source.length - 1) showQuestion(currentIndex + 1);
 }
 
 function indietro() {
   if (currentIndex > 0) showQuestion(currentIndex - 1);
+}
+
+function iniziaRipasso() {
+  if (domandeSbagliate.length === 0) {
+    alert("Non ci sono domande sbagliate da ripassare.");
+    return;
+  }
+  inRipasso = true;
+  currentIndex = 0;
+  showQuestion(0);
 }
 
 function startTimer() {
@@ -191,7 +200,7 @@ function displayTime() {
 }
 
 function disabilitaQuiz() {
-  document.querySelectorAll(".opzione, .nav-btn, #resetBtn").forEach(b => b.disabled = true);
+  document.querySelectorAll(".opzione, .nav-btn, #resetBtn, #ripassoBtn").forEach(b => b.disabled = true);
 }
 </script>
 
