@@ -35,11 +35,15 @@
     margin: 15px 10px 0 0;
   }
   #statistiche {
-    margin-top: 30px;
-    font-size: 20px;
-    color: #333;
-    border-top: 1px solid #ccc;
-    padding-top: 10px;
+    margin-top: 40px;
+    padding: 15px;
+    border: 2px solid #4CAF50;
+    background: #e8f5e9;
+    font-size: 22px;
+    color: #2e7d32;
+    font-weight: bold;
+    text-align: center;
+    user-select: none;
   }
 </style>
 </head>
@@ -53,6 +57,8 @@
     <button onclick="indietro()">« Indietro</button>
     <button onclick="avanti()">Avanti »</button>
   </div>
+
+  <!-- Sezione statistiche ben visibile -->
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
     ❌ Sbagliate: <span id="sbagliate">0</span>
@@ -122,12 +128,18 @@ function showQuestion(i) {
     btn.className = 'opzione';
     btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
     btn.onclick = () => checkAnswer(lett);
+    btn.disabled = false; // abilita sempre i bottoni nuovi
     opDiv.appendChild(btn);
   });
 }
 
 function checkAnswer(scelta) {
   const q = domande[currentIndex];
+
+  // Disattiva tutti i pulsanti dopo la risposta
+  const buttons = document.querySelectorAll('.opzione');
+  buttons.forEach(btn => btn.disabled = true);
+
   if (scelta === q.answer) {
     alert("✅ Corretto!");
     corrette++;
@@ -135,6 +147,7 @@ function checkAnswer(scelta) {
     alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
     sbagliate++;
   }
+
   aggiornaStatistiche();
 }
 
