@@ -45,6 +45,14 @@
     text-align: center;
     user-select: none;
   }
+  #timer {
+    font-size: 24px;
+    font-weight: bold;
+    color: #d32f2f;
+    margin-top: 30px;
+    text-align: center;
+    user-select: none;
+  }
 </style>
 </head>
 <body>
@@ -58,11 +66,13 @@
     <button onclick="avanti()">Avanti »</button>
   </div>
 
-  <!-- Sezione statistiche ben visibile -->
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
-    ❌ Sbagliate: <span id="sbagliate">0</span>
+    ❌ Sbagliate: <span id="sbagliate">0</span> |
+    <button onclick="resetStatistiche()" style="font-size:18px; padding:5px 10px; cursor:pointer;">Reset Statistiche</button>
   </div>
+
+  <div id="timer">Tempo rimanente: 30:00</div>
 </div>
 
 <script>
@@ -73,11 +83,15 @@ let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
 
+let timerDurata = 30 * 60; // 30 minuti in secondi
+let timerIntervallo;
+
 fetch(quizTxtURL)
   .then(response => response.text())
   .then(text => {
     domande = parseQuiz(text);
     showQuestion(currentIndex);
+    startTimer();
   })
   .catch(err => {
     document.getElementById('domanda').textContent = "Errore nel caricamento quiz.";
@@ -128,7 +142,7 @@ function showQuestion(i) {
     btn.className = 'opzione';
     btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
     btn.onclick = () => checkAnswer(lett);
-    btn.disabled = false; // abilita sempre i bottoni nuovi
+    btn.disabled = false;
     opDiv.appendChild(btn);
   });
 }
@@ -136,7 +150,7 @@ function showQuestion(i) {
 function checkAnswer(scelta) {
   const q = domande[currentIndex];
 
-  // Disattiva tutti i pulsanti dopo la risposta
+  // Disabilita i bottoni dopo la risposta
   const buttons = document.querySelectorAll('.opzione');
   buttons.forEach(btn => btn.disabled = true);
 
@@ -156,6 +170,12 @@ function aggiornaStatistiche() {
   document.getElementById("sbagliate").textContent = sbagliate;
 }
 
+function resetStatistiche() {
+  corrette = 0;
+  sbagliate = 0;
+  aggiornaStatistiche();
+}
+
 function avanti() {
   if (currentIndex < domande.length - 1) {
     currentIndex++;
@@ -168,6 +188,35 @@ function indietro() {
     currentIndex--;
     showQuestion(currentIndex);
   }
+}
+
+function startTimer() {
+  updateTimerDisplay(timerDurata);
+  timerIntervallo = setInterval(() => {
+    timerDurata--;
+    updateTimerDisplay(timerDurata);
+
+    if (timerDurata <= 0) {
+      clearInterval(timerIntervallo);
+      timerDurata = 0;
+      updateTimerDisplay(timerDurata);
+      disabilitaQuiz();
+      alert("⏰ Tempo scaduto! Il quiz è terminato.");
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay(secondiRimanenti) {
+  const min = Math.floor(secondiRimanenti / 60);
+  const sec = secondiRimanenti % 60;
+  document.getElementById("timer").textContent = `Tempo rimanente: ${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+}
+
+function disabilitaQuiz() {
+  const buttons = document.querySelectorAll('.opzione');
+  buttons.forEach(btn => btn.disabled = true);
+  // Disabilito anche avanti/indietro per sicurezza
+  document.querySelectorAll('#quizContainer > div > button').forEach(btn => btn.disabled = true);
 }
 </script>
 
