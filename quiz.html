@@ -91,31 +91,27 @@ function parseQuiz(text) {
   if (buf.length) blocchi.push(buf);
 
   return blocchi.map(b => {
-    // Domanda è la prima riga senza numero
     let domanda = b[0].replace(/^\d+\.\s*/, "");
-    // Paragrafo opzionale: se esiste ed è tra domanda e opzioni
     let paragrafo = "";
-    // Raccogliamo tutte le opzioni trovate
     let opzioni = { A: "", B: "", C: "", D: "" };
     let answer = "";
 
-    // Trova la riga Answer
+    // Cerca la riga answer ignorando maiuscole/minuscole
     for (const line of b) {
-      if (line.startsWith("Answer:")) {
-        answer = line.split(":")[1].trim();
+      if (/^answer:/i.test(line)) {
+        answer = line.split(":")[1].trim().toUpperCase();
       }
     }
 
-    // Cerca righe opzioni che iniziano con A., B., C., D.
+    // Cerca righe opzioni
     for (const line of b) {
-      if (/^A\./.test(line)) opzioni.A = line.substring(2).trim();
-      else if (/^B\./.test(line)) opzioni.B = line.substring(2).trim();
-      else if (/^C\./.test(line)) opzioni.C = line.substring(2).trim();
-      else if (/^D\./.test(line)) opzioni.D = line.substring(2).trim();
+      if (/^A\./i.test(line)) opzioni.A = line.substring(2).trim();
+      else if (/^B\./i.test(line)) opzioni.B = line.substring(2).trim();
+      else if (/^C\./i.test(line)) opzioni.C = line.substring(2).trim();
+      else if (/^D\./i.test(line)) opzioni.D = line.substring(2).trim();
     }
 
-    // Se la seconda riga non è un'opzione e non è Answer, la usiamo come paragrafo
-    if (b.length > 1 && !/^([ABCD]\.)/.test(b[1]) && !b[1].startsWith("Answer:")) {
+    if (b.length > 1 && !/^([ABCD]\.)/i.test(b[1]) && !/^answer:/i.test(b[1])) {
       paragrafo = b[1];
     }
 
@@ -142,8 +138,8 @@ function showQuestion(i) {
 }
 
 function checkAnswer(sc) {
-  const giusta = domande[currentIndex].answer;
-  if (sc === giusta) {
+  const giusta = domande[currentIndex].answer.toUpperCase();
+  if (sc.toUpperCase() === giusta) {
     corrette++;
     alert("✅ Corretto!");
   } else {
