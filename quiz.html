@@ -96,20 +96,13 @@ function parseQuiz(text) {
     let opzioni = { A: "", B: "", C: "", D: "" };
     let answer = "";
 
-    // Cerca la riga answer ignorando maiuscole/minuscole
-    for (const line of b) {
-      if (/^answer:/i.test(line)) {
-        answer = line.split(":")[1].trim().toUpperCase();
-      }
-    }
-
-    // Cerca righe opzioni
-    for (const line of b) {
-      if (/^A\./i.test(line)) opzioni.A = line.substring(2).trim();
+    b.forEach(line => {
+      if (/^answer:/i.test(line)) answer = line.split(":")[1].trim().toUpperCase();
+      else if (/^A\./i.test(line)) opzioni.A = line.substring(2).trim();
       else if (/^B\./i.test(line)) opzioni.B = line.substring(2).trim();
       else if (/^C\./i.test(line)) opzioni.C = line.substring(2).trim();
       else if (/^D\./i.test(line)) opzioni.D = line.substring(2).trim();
-    }
+    });
 
     if (b.length > 1 && !/^([ABCD]\.)/i.test(b[1]) && !/^answer:/i.test(b[1])) {
       paragrafo = b[1];
@@ -123,7 +116,7 @@ function showQuestion(i) {
   if (i < 0 || i >= domande.length) return;
   currentIndex = i;
   const q = domande[i];
-  document.getElementById("domanda").textContent = q.domanda;
+  document.getElementById("domanda").textContent = `${i + 1}. ${q.domanda}`;
   document.getElementById("paragrafo").textContent = q.paragrafo;
   const opDiv = document.getElementById("opzioni");
   opDiv.innerHTML = "";
@@ -155,9 +148,7 @@ function updateStats() {
 }
 
 function resetStatistiche() {
-  corrette = 0;
-  sbagliate = 0;
-  updateStats();
+  corrette = 0; sbagliate = 0; updateStats();
 }
 
 function avanti() {
