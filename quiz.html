@@ -43,7 +43,6 @@
 <script>
 const quizTxtURL = "https://dl.dropboxusercontent.com/scl/fi/it9x9ji11mudqw0hivsmq/29-39conpunto.txt?rlkey=znlx3atviv8j97wp4uqani148&st=60d08g1w&dl=1";
 
-
 let domande = [];
 let currentIndex = 0;
 let corrette = 0;
@@ -51,7 +50,6 @@ let sbagliate = 0;
 let timerInterval;
 let tempoRimanente = 30 * 60; // 30 minuti
 
-// Carica quiz e avvia timer appena la pagina è pronta
 document.addEventListener("DOMContentLoaded", () => {
   loadQuiz();
   startTimer();
@@ -92,12 +90,37 @@ function parseQuiz(text) {
   });
   if (buf.length) blocchi.push(buf);
 
-  return blocchi.map(b => ({
-    domanda: b[0].replace(/^\d+\.\s*/, ""),
-    paragrafo: b[1] || "",
-    opzioni: { A: b[3] || "", B: b[5] || "", C: b[7] || "", D: b[9] || "" },
-    answer: (b.find(x => x.startsWith("Answer:")) || "").split(":")[1]?.trim() || ""
-  }));
+  return blocchi.map(b => {
+    // Domanda è la prima riga senza numero
+    let domanda = b[0].replace(/^\d+\.\s*/, "");
+    // Paragrafo opzionale: se esiste ed è tra domanda e opzioni
+    let paragrafo = "";
+    // Raccogliamo tutte le opzioni trovate
+    let opzioni = { A: "", B: "", C: "", D: "" };
+    let answer = "";
+
+    // Trova la riga Answer
+    for (const line of b) {
+      if (line.startsWith("Answer:")) {
+        answer = line.split(":")[1].trim();
+      }
+    }
+
+    // Cerca righe opzioni che iniziano con A., B., C., D.
+    for (const line of b) {
+      if (/^A\./.test(line)) opzioni.A = line.substring(2).trim();
+      else if (/^B\./.test(line)) opzioni.B = line.substring(2).trim();
+      else if (/^C\./.test(line)) opzioni.C = line.substring(2).trim();
+      else if (/^D\./.test(line)) opzioni.D = line.substring(2).trim();
+    }
+
+    // Se la seconda riga non è un'opzione e non è Answer, la usiamo come paragrafo
+    if (b.length > 1 && !/^([ABCD]\.)/.test(b[1]) && !b[1].startsWith("Answer:")) {
+      paragrafo = b[1];
+    }
+
+    return { domanda, paragrafo, opzioni, answer };
+  });
 }
 
 function showQuestion(i) {
@@ -120,8 +143,13 @@ function showQuestion(i) {
 
 function checkAnswer(sc) {
   const giusta = domande[currentIndex].answer;
-  sc === giusta ? corrette++ : sbagliate++;
-  alert(sc === giusta ? "✅ Corretto!" : "❌ Sbagliato! Risposta giusta: " + giusta);
+  if (sc === giusta) {
+    corrette++;
+    alert("✅ Corretto!");
+  } else {
+    sbagliate++;
+    alert("❌ Sbagliato! Risposta giusta: " + giusta);
+  }
   updateStats();
 }
 
@@ -131,11 +159,18 @@ function updateStats() {
 }
 
 function resetStatistiche() {
-  corrette = 0; sbagliate = 0; updateStats();
+  corrette = 0;
+  sbagliate = 0;
+  updateStats();
 }
 
-function avanti() { if (currentIndex < domande.length - 1) showQuestion(currentIndex + 1); }
-function indietro() { if (currentIndex > 0) showQuestion(currentIndex - 1); }
+function avanti() {
+  if (currentIndex < domande.length - 1) showQuestion(currentIndex + 1);
+}
+
+function indietro() {
+  if (currentIndex > 0) showQuestion(currentIndex - 1);
+}
 
 function startTimer() {
   displayTime();
