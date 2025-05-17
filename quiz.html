@@ -33,100 +33,66 @@
     padding: 10px 20px;
     font-size: 20px;
     margin: 15px 10px 0 0;
+    cursor: pointer;
   }
   #statistiche {
     margin-top: 30px;
     font-size: 20px;
     color: #333;
-    border-top: 2px solid #4CAF50;
-    padding-top: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
   }
-  #statistiche span {
-    font-weight: bold;
-    color: #2e7d32;
-  }
-  #resetBtn {
-    font-size: 18px;
-    padding: 5px 12px;
-    cursor: pointer;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    user-select: none;
-  }
-  #timer {
-    font-size: 24px;
-    font-weight: bold;
-    color: #d32f2f;
-    margin-top: 25px;
-    text-align: center;
-    user-select: none;
-  }
-
-  /* Overlay password */
   #loginOverlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.75);
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.6);
     display: flex;
-    justify-content: center;
     align-items: center;
-    z-index: 9999;
+    justify-content: center;
+    z-index: 1000;
   }
   #loginBox {
     background: white;
-    padding: 30px 40px;
-    border-radius: 10px;
-    text-align: center;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #0003;
     max-width: 320px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    width: 90%;
+    text-align: center;
   }
-  #loginBox h2 {
-    margin-bottom: 20px;
-  }
-  #loginBox input[type="password"] {
-    font-size: 22px;
-    padding: 10px;
+  #loginBox input {
+    font-size: 20px;
+    padding: 8px;
     width: 100%;
-    margin-bottom: 20px;
-    border: 2px solid #4CAF50;
-    border-radius: 6px;
-    outline: none;
-  }
-  #loginBox button {
-    font-size: 22px;
-    padding: 10px 20px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    margin-top: 10px;
+    box-sizing: border-box;
   }
   #loginError {
-    color: #d32f2f;
-    margin-top: 10px;
+    margin-top: 15px;
+    color: red;
     min-height: 24px;
+  }
+  #timer {
+    font-weight: bold;
+    font-size: 22px;
+    color: #a00;
+    margin-top: 15px;
   }
 </style>
 </head>
 <body>
 
-<!-- Overlay password -->
-<div id="loginOverlay">
+<div id="loginOverlay" style="display:none;">
   <div id="loginBox">
-    <h2>Inserisci password per iniziare</h2>
-    <input type="password" id="passwordInput" placeholder="Password..." autofocus />
-    <button onclick="checkPassword()">Accedi</button>
+    <h2>Inserisci password per iniziare il quiz</h2>
+    <input type="password" id="passwordInput" placeholder="Password" />
+    <button onclick="checkPassword()">Entra</button>
     <div id="loginError"></div>
   </div>
 </div>
 
 <div id="quizContainer" style="display:none;">
+  <div id="timer">Tempo rimasto: 30:00</div>
   <div id="domanda">Caricamento domanda...</div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
@@ -134,38 +100,46 @@
     <button onclick="indietro()">« Indietro</button>
     <button onclick="avanti()">Avanti »</button>
   </div>
-
   <div id="statistiche">
-    <div>
-      ✅ Corrette: <span id="corrette">0</span> |
-      ❌ Sbagliate: <span id="sbagliate">0</span>
-    </div>
-    <button id="resetBtn" onclick="resetStatistiche()">Reset Statistiche</button>
+    ✅ Corrette: <span id="corrette">0</span> |
+    ❌ Sbagliate: <span id="sbagliate">0</span>
+    <button onclick="resetStatistiche()" style="margin-left:20px; font-size:18px; padding:5px 10px;">Reset statistiche</button>
   </div>
-
-  <div id="timer">Tempo rimanente: 30:00</div>
 </div>
 
 <script>
-const QUIZ_PASSWORD = "mypass123"; // <--- Metti qui la tua password!
-
+const QUIZ_PASSWORD = "1234";  // metti la password che vuoi
 const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
 
 let domande = [];
 let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
+let timerInterval = null;
+let tempoRimasto = 30 * 60; // 30 minuti in secondi
 
-let timerDurata = 30 * 60; // 30 minuti in secondi
-let timerIntervallo;
+window.onload = function() {
+  if (sessionStorage.getItem("quiz_access_granted") === "true") {
+    document.getElementById("loginOverlay").style.display = "none";
+    document.getElementById("quizContainer").style.display = "block";
+    caricaQuiz();
+    startTimer();
+  } else {
+    document.getElementById("loginOverlay").style.display = "flex";
+    document.getElementById("quizContainer").style.display = "none";
+  }
+};
 
 function checkPassword() {
   const pw = document.getElementById("passwordInput").value;
   const errorDiv = document.getElementById("loginError");
   if (pw === QUIZ_PASSWORD) {
+    sessionStorage.setItem("quiz_access_granted", "true");
     document.getElementById("loginOverlay").style.display = "none";
     document.getElementById("quizContainer").style.display = "block";
+    errorDiv.textContent = "";
     caricaQuiz();
+    startTimer();
   } else {
     errorDiv.textContent = "Password errata, riprova.";
   }
@@ -177,7 +151,6 @@ function caricaQuiz() {
     .then(text => {
       domande = parseQuiz(text);
       showQuestion(currentIndex);
-      startTimer();
     })
     .catch(err => {
       document.getElementById('domanda').textContent = "Errore nel caricamento quiz.";
@@ -229,18 +202,12 @@ function showQuestion(i) {
     btn.className = 'opzione';
     btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
     btn.onclick = () => checkAnswer(lett);
-    btn.disabled = false;
     opDiv.appendChild(btn);
   });
 }
 
 function checkAnswer(scelta) {
   const q = domande[currentIndex];
-
-  // Disabilita i bottoni dopo la risposta
-  const buttons = document.querySelectorAll('.opzione');
-  buttons.forEach(btn => btn.disabled = true);
-
   if (scelta === q.answer) {
     alert("✅ Corretto!");
     corrette++;
@@ -248,7 +215,6 @@ function checkAnswer(scelta) {
     alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
     sbagliate++;
   }
-
   aggiornaStatistiche();
 }
 
@@ -278,32 +244,24 @@ function indietro() {
 }
 
 function startTimer() {
-  updateTimerDisplay(timerDurata);
-  timerIntervallo = setInterval(() => {
-    timerDurata--;
-    updateTimerDisplay(timerDurata);
-
-    if (timerDurata <= 0) {
-      clearInterval(timerIntervallo);
-      timerDurata = 0;
-      updateTimerDisplay(timerDurata);
-      disabilitaQuiz();
-      alert("⏰ Tempo scaduto! Il quiz è terminato.");
+  aggiornaTimerDisplay();
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (tempoRimasto <= 0) {
+      clearInterval(timerInterval);
+      alert("⏰ Tempo scaduto!");
+      // puoi qui aggiungere comportamento dopo scadenza, tipo bloccare quiz o altro
+    } else {
+      tempoRimasto--;
+      aggiornaTimerDisplay();
     }
   }, 1000);
 }
 
-function updateTimerDisplay(secondiRimanenti) {
-  const min = Math.floor(secondiRimanenti / 60);
-  const sec = secondiRimanenti % 60;
-  document.getElementById("timer").textContent = `Tempo rimanente: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-}
-
-function disabilitaQuiz() {
-  const buttons = document.querySelectorAll('.opzione');
-  buttons.forEach(btn => btn.disabled = true);
-  // Disabilito anche avanti/indietro per sicurezza
-  document.querySelectorAll('#quizContainer > div > button').forEach(btn => btn.disabled = true);
+function aggiornaTimerDisplay() {
+  const min = Math.floor(tempoRimasto / 60).toString().padStart(2, '0');
+  const sec = (tempoRimasto % 60).toString().padStart(2, '0');
+  document.getElementById("timer").textContent = `Tempo rimasto: ${min}:${sec}`;
 }
 </script>
 
