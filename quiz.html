@@ -35,21 +35,35 @@
     margin: 15px 10px 0 0;
   }
   #statistiche {
-    margin-top: 40px;
-    padding: 15px;
-    border: 2px solid #4CAF50;
-    background: #e8f5e9;
-    font-size: 22px;
-    color: #2e7d32;
+    margin-top: 30px;
+    font-size: 20px;
+    color: #333;
+    border-top: 2px solid #4CAF50;
+    padding-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+  #statistiche span {
     font-weight: bold;
-    text-align: center;
+    color: #2e7d32;
+  }
+  #resetBtn {
+    font-size: 18px;
+    padding: 5px 12px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
     user-select: none;
   }
   #timer {
     font-size: 24px;
     font-weight: bold;
     color: #d32f2f;
-    margin-top: 30px;
+    margin-top: 25px;
     text-align: center;
     user-select: none;
   }
@@ -67,9 +81,11 @@
   </div>
 
   <div id="statistiche">
-    ✅ Corrette: <span id="corrette">0</span> |
-    ❌ Sbagliate: <span id="sbagliate">0</span> |
-    <button onclick="resetStatistiche()" style="font-size:18px; padding:5px 10px; cursor:pointer;">Reset Statistiche</button>
+    <div>
+      ✅ Corrette: <span id="corrette">0</span> |
+      ❌ Sbagliate: <span id="sbagliate">0</span>
+    </div>
+    <button id="resetBtn" onclick="resetStatistiche()">Reset Statistiche</button>
   </div>
 
   <div id="timer">Tempo rimanente: 30:00</div>
