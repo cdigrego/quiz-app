@@ -5,40 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Quiz Viewer</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-    font-size: 24px;
-    background: #f9f9f9;
-    max-width: 700px;
-    margin: auto;
+  body{
+    font-family:Arial,Helvetica,sans-serif;
+    padding:20px;
+    font-size:22px;
+    background:#f9f9f9;
+    max-width:700px;
+    margin:auto;
   }
-  #domanda {
-    font-weight: bold;
-    margin-bottom: 10px;
+  #domanda{font-weight:bold;margin-bottom:10px}
+  #paragrafo{font-style:italic;margin-bottom:20px;color:#555}
+  button{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 14px;
+    margin:8px 0;
+    font-size:20px;
+    border:1px solid #333;
+    border-radius:6px;
+    background:#fff;
+    cursor:pointer;
   }
-  #paragrafo {
-    font-style: italic;
-    margin-bottom: 20px;
-    color: #555;
-  }
-  .opzione {
-    margin: 8px 0;
-  }
-  button {
-    padding: 10px 20px;
-    font-size: 20px;
-    margin: 15px 10px 0 0;
-  }
+  button:hover{background:#eaeaea}
+  #nav{margin-top:25px;text-align:center}
+  #nav button{width:auto;margin:0 10px}
 </style>
 </head>
 <body>
 
 <div id="quizContainer">
-  <div id="domanda">Caricamento domanda...</div>
+  <div id="domanda">Caricamento domanda…</div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
-  <div>
+
+  <div id="nav">
     <button onclick="indietro()">« Indietro</button>
     <button onclick="avanti()">Avanti »</button>
   </div>
@@ -51,87 +52,84 @@ let domande = [];
 let currentIndex = 0;
 
 fetch(quizTxtURL)
-  .then(response => response.text())
-  .then(text => {
-    domande = parseQuiz(text);
-    showQuestion(currentIndex);
+  .then(r => {
+    if (!r.ok) throw new Error("Impossibile scaricare quiz.txt");
+    return r.text();
+  })
+  .then(txt => {
+    domande = parseQuiz(txt);
+    showQuestion(0);
   })
   .catch(err => {
-    document.getElementById('domanda').textContent = "Errore nel caricamento quiz.";
-    console.error(err);
+    document.getElementById("domanda").textContent = "Errore: " + err.message;
   });
 
-function parseQuiz(text) {
-  let righe = text.split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
-  let blocchi = [];
-  let buffer = [];
-  
-  for (let r of righe) {
-    if (/^\d+\./.test(r) && buffer.length > 0) {
-      blocchi.push(buffer);
-      buffer = [r];
-    } else {
-      buffer.push(r);
+function parseQuiz(text){
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length);
+  const blocks = [];
+  let buf = [];
+
+  for (const l of lines){
+    if (/^\d+\./.test(l) && buf.length){
+      blocks.push(buf);
+      buf = [l];
+    }else{
+      buf.push(l);
     }
   }
-  if (buffer.length > 0) blocchi.push(buffer);
+  if (buf.length) blocks.push(buf);
 
-  return blocchi.map(b => {
-    return {
-      domanda: b[0].replace(/^\d+\.\s*/, ""),
-      paragrafo: b[1] || "",
-      opzioni: {
-        A: b[3] || "",
-        B: b[4] || "",
-        C: b[5] || "",
-        D: b[6] || ""
-      },
-      answer: (b.find(r => r.startsWith("Answer:")) || "").split(":")[1]?.trim() || ""
-    };
+  return blocks.map(b => {
+    const q = { domanda:"", paragrafo:"", opzioni:{}, answer:"" };
+    q.domanda = b[0].replace(/^\d+\.\s*/, "");
+    q.paragrafo = b[1] || "";
+    for (let i=2;i<b.length;i++){
+      if (/^[A-D]\./.test(b[i]) && i+1 < b.length){
+        const lett = b[i][0];          // 'A'..'D'
+        q.opzioni[lett] = b[i+1];      // testo riga successiva
+        i++;                           // salta testo già preso
+      }else if (b[i].startsWith("Answer:")){
+        q.answer = b[i].split(":")[1].trim();
+      }
+    }
+    return q;
   });
 }
 
-function showQuestion(i) {
-  if (i < 0 || i >= domande.length) return;
+function showQuestion(i){
+  if (i<0 || i>=domande.length) return;
   const q = domande[i];
-  document.getElementById('domanda').textContent = q.domanda;
-  document.getElementById('paragrafo').textContent = q.paragrafo;
+  currentIndex = i;
+  document.getElementById("domanda").textContent = q.domanda;
+  document.getElementById("paragrafo").textContent = q.paragrafo;
+  const opDiv = document.getElementById("opzioni");
+  opDiv.innerHTML = "";
 
-  let opzioniDiv = document.getElementById('opzioni');
-  opzioniDiv.innerHTML = "";
-
-  for (const [lettera, testo] of Object.entries(q.opzioni)) {
-    let btn = document.createElement('button');
-    btn.textContent = lettera + ". " + testo;
-    btn.onclick = () => checkAnswer(lettera);
-    btn.className = 'opzione';
-    opzioniDiv.appendChild(btn);
-  }
+  Object.entries(q.opzioni).forEach(([lett,text])=>{
+    const btn = document.createElement("button");
+    btn.textContent = `${lett}. ${text}`;
+    btn.onclick = () => checkAnswer(lett,btn);
+    opDiv.appendChild(btn);
+  });
 }
 
-function checkAnswer(scelta) {
-  const q = domande[currentIndex];
-  if (scelta === q.answer) {
+function checkAnswer(lett,btn){
+  const correct = domande[currentIndex].answer;
+  if (lett === correct){
+    btn.style.background="#b7e4b0";
     alert("✅ Corretto!");
-  } else {
-    alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
+  }else{
+    btn.style.background="#f5b3af";
+    alert("❌ Sbagliato! La risposta giusta è: " + correct);
   }
 }
 
-function avanti() {
-  if (currentIndex < domande.length - 1) {
-    currentIndex++;
-    showQuestion(currentIndex);
-  }
+function avanti(){
+  if (currentIndex < domande.length-1) showQuestion(currentIndex+1);
 }
-
-function indietro() {
-  if (currentIndex > 0) {
-    currentIndex--;
-    showQuestion(currentIndex);
-  }
+function indietro(){
+  if (currentIndex > 0) showQuestion(currentIndex-1);
 }
 </script>
-
 </body>
 </html>
