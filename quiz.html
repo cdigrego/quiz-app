@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quiz Viewer con Password</title>
+<title>Quiz Viewer Protetto</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -13,23 +13,28 @@
     max-width: 700px;
     margin: auto;
   }
-  #loginSection, #quizContainer {
-    max-width: 700px;
-    margin: auto;
-  }
   #loginSection {
+    max-width: 400px;
+    margin: 100px auto;
     text-align: center;
-    margin-top: 100px;
   }
   #loginSection input {
-    font-size: 24px;
+    font-size: 20px;
     padding: 10px;
-    width: 300px;
+    width: 80%;
+    margin-bottom: 10px;
   }
   #loginSection button {
-    font-size: 24px;
+    font-size: 20px;
     padding: 10px 20px;
-    margin-left: 10px;
+  }
+  #loginMsg {
+    color: red;
+    margin-top: 10px;
+    height: 24px;
+  }
+  #quizContainer {
+    display: none;
   }
   #domanda {
     font-weight: bold;
@@ -47,7 +52,7 @@
     font-size: 20px;
     cursor: pointer;
   }
-  button {
+  button.nav-btn {
     padding: 10px 20px;
     font-size: 20px;
     margin: 15px 10px 0 0;
@@ -59,34 +64,56 @@
     border-top: 1px solid #ccc;
     padding-top: 10px;
   }
+  #timer {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #007700;
+  }
+  #resetBtn {
+    font-size: 18px;
+    padding: 5px 15px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
 <div id="loginSection">
-  <h2>Inserisci la password per iniziare il quiz</h2>
+  <h2>Inserisci password per accedere al quiz</h2>
   <input type="password" id="passwordInput" placeholder="Password" />
+  <br/>
   <button onclick="checkPassword()">Entra</button>
-  <div id="loginMsg" style="color:red; margin-top:15px;"></div>
+  <div id="loginMsg"></div>
 </div>
 
-<div id="quizContainer" style="display:none;">
+<div id="quizContainer">
+  <div id="timer">Tempo rimanente: 30:00</div>
   <div id="domanda">Caricamento domanda...</div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
   <div>
-    <button onclick="indietro()">« Indietro</button>
-    <button onclick="avanti()">Avanti »</button>
-    <button onclick="resetStatistiche()">Reset Statistiche</button>
+    <button class="nav-btn" onclick="indietro()">« Indietro</button>
+    <button class="nav-btn" onclick="avanti()">Avanti »</button>
   </div>
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
     ❌ Sbagliate: <span id="sbagliate">0</span>
   </div>
+  <button id="resetBtn" onclick="resetStatistiche()">Reset Statistiche</button>
 </div>
 
 <script>
-const passwordBase64 = "bWlvU2VncmV0bzEyMw==";
+const passwordBase64 = "bWlvU2VncmV0bzEyMw=="; // 'mioSegreto123' offuscata base64
+const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
+
+let domande = [];
+let currentIndex = 0;
+let corrette = 0;
+let sbagliate = 0;
+let timerInterval;
+let tempoRimanente = 30 * 60; // 30 minuti in secondi
 
 function decodeBase64(str) {
   try {
@@ -97,23 +124,17 @@ function decodeBase64(str) {
 }
 
 function checkPassword() {
-  const input = document.getElementById("passwordInput").value;
+  const input = document.getElementById("passwordInput").value.trim();
   const password = decodeBase64(passwordBase64);
   if(input === password) {
     document.getElementById("loginSection").style.display = "none";
     document.getElementById("quizContainer").style.display = "block";
     loadQuiz();
+    startTimer();
   } else {
     document.getElementById("loginMsg").textContent = "Password errata, riprova.";
   }
 }
-
-const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
-
-let domande = [];
-let currentIndex = 0;
-let corrette = 0;
-let sbagliate = 0;
 
 function loadQuiz() {
   fetch(quizTxtURL)
@@ -211,6 +232,32 @@ function indietro() {
     currentIndex--;
     showQuestion(currentIndex);
   }
+}
+
+function startTimer() {
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    tempoRimanente--;
+    if (tempoRimanente <= 0) {
+      clearInterval(timerInterval);
+      alert("Tempo scaduto!");
+      // blocca quiz se vuoi, ad es. disabilita pulsanti
+      disabilitaQuiz();
+    }
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const min = Math.floor(tempoRimanente / 60);
+  const sec = tempoRimanente % 60;
+  document.getElementById("timer").textContent = `Tempo rimanente: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+}
+
+function disabilitaQuiz() {
+  document.querySelectorAll("#opzioni button").forEach(b => b.disabled = true);
+  document.querySelectorAll(".nav-btn").forEach(b => b.disabled = true);
+  document.getElementById("resetBtn").disabled = true;
 }
 </script>
 
