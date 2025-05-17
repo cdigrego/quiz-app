@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quiz Viewer Protetto</title>
+<title>Quiz Viewer con Password</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -12,6 +12,24 @@
     background: #f9f9f9;
     max-width: 700px;
     margin: auto;
+  }
+  #loginSection, #quizContainer {
+    max-width: 700px;
+    margin: auto;
+  }
+  #loginSection {
+    text-align: center;
+    margin-top: 100px;
+  }
+  #loginSection input {
+    font-size: 24px;
+    padding: 10px;
+    width: 300px;
+  }
+  #loginSection button {
+    font-size: 24px;
+    padding: 10px 20px;
+    margin-left: 10px;
   }
   #domanda {
     font-weight: bold;
@@ -33,7 +51,6 @@
     padding: 10px 20px;
     font-size: 20px;
     margin: 15px 10px 0 0;
-    cursor: pointer;
   }
   #statistiche {
     margin-top: 30px;
@@ -42,110 +59,63 @@
     border-top: 1px solid #ccc;
     padding-top: 10px;
   }
-  #loginOverlay {
-    position: fixed;
-    top:0; left:0; right:0; bottom:0;
-    background: rgba(0,0,0,0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-  #loginBox {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px #0003;
-    max-width: 320px;
-    width: 90%;
-    text-align: center;
-  }
-  #loginBox input {
-    font-size: 20px;
-    padding: 8px;
-    width: 100%;
-    margin-top: 10px;
-    box-sizing: border-box;
-  }
-  #loginError {
-    margin-top: 15px;
-    color: red;
-    min-height: 24px;
-  }
-  #timer {
-    font-weight: bold;
-    font-size: 22px;
-    color: #a00;
-    margin-top: 15px;
-  }
 </style>
 </head>
 <body>
 
-<div id="loginOverlay" style="display:none;">
-  <div id="loginBox">
-    <h2>Inserisci password per iniziare il quiz</h2>
-    <input type="password" id="passwordInput" placeholder="Password" />
-    <button onclick="checkPassword()">Entra</button>
-    <div id="loginError"></div>
-  </div>
+<div id="loginSection">
+  <h2>Inserisci la password per iniziare il quiz</h2>
+  <input type="password" id="passwordInput" placeholder="Password" />
+  <button onclick="checkPassword()">Entra</button>
+  <div id="loginMsg" style="color:red; margin-top:15px;"></div>
 </div>
 
 <div id="quizContainer" style="display:none;">
-  <div id="timer">Tempo rimasto: 30:00</div>
   <div id="domanda">Caricamento domanda...</div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
   <div>
     <button onclick="indietro()">« Indietro</button>
     <button onclick="avanti()">Avanti »</button>
+    <button onclick="resetStatistiche()">Reset Statistiche</button>
   </div>
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
     ❌ Sbagliate: <span id="sbagliate">0</span>
-    <button onclick="resetStatistiche()" style="margin-left:20px; font-size:18px; padding:5px 10px;">Reset statistiche</button>
   </div>
 </div>
 
 <script>
-const QUIZ_PASSWORD = "1234";  // metti la password che vuoi
+const passwordBase64 = "bWlvU2VncmV0bzEyMw==";
+
+function decodeBase64(str) {
+  try {
+    return atob(str);
+  } catch(e) {
+    return "";
+  }
+}
+
+function checkPassword() {
+  const input = document.getElementById("passwordInput").value;
+  const password = decodeBase64(passwordBase64);
+  if(input === password) {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("quizContainer").style.display = "block";
+    loadQuiz();
+  } else {
+    document.getElementById("loginMsg").textContent = "Password errata, riprova.";
+  }
+}
+
 const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
 
 let domande = [];
 let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
-let timerInterval = null;
-let tempoRimasto = 30 * 60; // 30 minuti in secondi
 
-window.onload = function() {
-  if (sessionStorage.getItem("quiz_access_granted") === "true") {
-    document.getElementById("loginOverlay").style.display = "none";
-    document.getElementById("quizContainer").style.display = "block";
-    caricaQuiz();
-    startTimer();
-  } else {
-    document.getElementById("loginOverlay").style.display = "flex";
-    document.getElementById("quizContainer").style.display = "none";
-  }
-};
-
-function checkPassword() {
-  const pw = document.getElementById("passwordInput").value;
-  const errorDiv = document.getElementById("loginError");
-  if (pw === QUIZ_PASSWORD) {
-    sessionStorage.setItem("quiz_access_granted", "true");
-    document.getElementById("loginOverlay").style.display = "none";
-    document.getElementById("quizContainer").style.display = "block";
-    errorDiv.textContent = "";
-    caricaQuiz();
-    startTimer();
-  } else {
-    errorDiv.textContent = "Password errata, riprova.";
-  }
-}
-
-function caricaQuiz() {
+function loadQuiz() {
   fetch(quizTxtURL)
     .then(response => response.text())
     .then(text => {
@@ -241,27 +211,6 @@ function indietro() {
     currentIndex--;
     showQuestion(currentIndex);
   }
-}
-
-function startTimer() {
-  aggiornaTimerDisplay();
-  if(timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    if (tempoRimasto <= 0) {
-      clearInterval(timerInterval);
-      alert("⏰ Tempo scaduto!");
-      // puoi qui aggiungere comportamento dopo scadenza, tipo bloccare quiz o altro
-    } else {
-      tempoRimasto--;
-      aggiornaTimerDisplay();
-    }
-  }, 1000);
-}
-
-function aggiornaTimerDisplay() {
-  const min = Math.floor(tempoRimasto / 60).toString().padStart(2, '0');
-  const sec = (tempoRimasto % 60).toString().padStart(2, '0');
-  document.getElementById("timer").textContent = `Tempo rimasto: ${min}:${sec}`;
 }
 </script>
 
