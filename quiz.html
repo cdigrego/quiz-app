@@ -3,90 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quiz Viewer Protetto</title>
+<title>Quiz Viewer</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-    font-size: 24px;
-    background: #f9f9f9;
-    max-width: 700px;
-    margin: auto;
+  body{
+    font-family:Arial,Helvetica,sans-serif;
+    padding:20px;
+    font-size:24px;
+    background:#f9f9f9;
+    max-width:700px;
+    margin:auto;
   }
-  #loginSection {
-    max-width: 400px;
-    margin: 100px auto;
-    text-align: center;
-  }
-  #loginSection input {
-    font-size: 20px;
-    padding: 10px;
-    width: 80%;
-    margin-bottom: 10px;
-  }
-  #loginSection button {
-    font-size: 20px;
-    padding: 10px 20px;
-  }
-  #loginMsg {
-    color: red;
-    margin-top: 10px;
-    height: 24px;
-  }
-  #quizContainer {
-    display: none;
-  }
-  #domanda {
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-  #paragrafo {
-    font-style: italic;
-    margin-bottom: 20px;
-    color: #555;
-  }
-  .opzione {
-    display: block;
-    padding: 10px;
-    margin: 10px 0;
-    font-size: 20px;
-    cursor: pointer;
-  }
-  button.nav-btn {
-    padding: 10px 20px;
-    font-size: 20px;
-    margin: 15px 10px 0 0;
-  }
-  #statistiche {
-    margin-top: 30px;
-    font-size: 20px;
-    color: #333;
-    border-top: 1px solid #ccc;
-    padding-top: 10px;
-  }
-  #timer {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    color: #007700;
-  }
-  #resetBtn {
-    font-size: 18px;
-    padding: 5px 15px;
-    margin-top: 10px;
-    cursor: pointer;
-  }
+  #domanda{font-weight:bold;margin-bottom:10px;}
+  #paragrafo{font-style:italic;margin-bottom:20px;color:#555;}
+  .opzione{display:block;padding:10px;margin:10px 0;font-size:20px;cursor:pointer;}
+  button.nav-btn{padding:10px 20px;font-size:20px;margin:15px 10px 0 0;}
+  #statistiche{margin-top:30px;font-size:20px;color:#333;border-top:1px solid #ccc;padding-top:10px;}
+  #timer{font-size:20px;font-weight:bold;margin-bottom:20px;color:#007700;}
+  #resetBtn{font-size:18px;padding:5px 15px;margin-top:10px;cursor:pointer;}
 </style>
 </head>
 <body>
-
-<div id="loginSection">
-  <h2>Inserisci password per accedere al quiz</h2>
-  <input type="password" id="passwordInput" placeholder="Password" />
-  <br/>
-  <button onclick="checkPassword()">Entra</button>
-  <div id="loginMsg"></div>
-</div>
 
 <div id="quizContainer">
   <div id="timer">Tempo rimanente: 30:00</div>
@@ -105,160 +41,121 @@
 </div>
 
 <script>
-const passwordBase64 = "bWlvU2VncmV0bzEyMw=="; 
-const quizTxtURL = "https://www.dropbox.com/scl/fi/669okd50nxwwjcfokklny/quiz.txt?rlkey=g3hl869ebk0hsujbjuj0ds2b3&st=r04e84lx&dl=0";
- 
+const quizTxtURL = "https://dl.dropboxusercontent.com/scl/fi/669okd50nxwwjcfokklny/quiz.txt?rlkey=g3hl869ebk0hsujbjuj0ds2b3&st=r04e84lx&dl=1";
 
-`let domande = [];
+let domande = [];
 let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
 let timerInterval;
-let tempoRimanente = 30 * 60; // 30 minuti in secondi
+let tempoRimanente = 30 * 60; // 30 minuti
 
-function decodeBase64(str) {
-  try {
-    return atob(str);
-  } catch(e) {
-    return "";
-  }
-}
-
-function checkPassword() {
-  const input = document.getElementById("passwordInput").value.trim();
-  const password = decodeBase64(passwordBase64);
-  if(input === password) {
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("quizContainer").style.display = "block";
-    loadQuiz();
-    startTimer();
-  } else {
-    document.getElementById("loginMsg").textContent = "Password errata, riprova.";
-  }
-}
+// Carica quiz e avvia timer appena la pagina è pronta
+document.addEventListener("DOMContentLoaded", () => {
+  loadQuiz();
+  startTimer();
+});
 
 function loadQuiz() {
   fetch(quizTxtURL)
-    .then(response => response.text())
+    .then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    })
     .then(text => {
       domande = parseQuiz(text);
-      showQuestion(currentIndex);
+      if (domande.length === 0) {
+        document.getElementById("domanda").textContent = "Nessuna domanda trovata.";
+        return;
+      }
+      showQuestion(0);
     })
     .catch(err => {
-      document.getElementById('domanda').textContent = "Errore nel caricamento quiz.";
+      document.getElementById("domanda").textContent = "Errore nel caricamento quiz.";
       console.error(err);
     });
 }
 
 function parseQuiz(text) {
-  let righe = text.split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
-  let blocchi = [];
-  let buffer = [];
+  const righe = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+  const blocchi = [];
+  let buf = [];
 
-  for (let r of righe) {
-    if (/^\d+\./.test(r) && buffer.length > 0) {
-      blocchi.push(buffer);
-      buffer = [r];
+  righe.forEach(r => {
+    if (/^\d+\./.test(r) && buf.length) {
+      blocchi.push(buf);
+      buf = [r];
     } else {
-      buffer.push(r);
+      buf.push(r);
     }
-  }
-  if (buffer.length > 0) blocchi.push(buffer);
-
-  return blocchi.map(b => {
-    return {
-      domanda: b[0].replace(/^\d+\.\s*/, ""),
-      paragrafo: b[1] || "",
-      opzioni: {
-        A: b[3] || "",
-        B: b[5] || "",
-        C: b[7] || "",
-        D: b[9] || ""
-      },
-      answer: (b.find(r => r.startsWith("Answer:")) || "").split(":")[1]?.trim() || ""
-    };
   });
+  if (buf.length) blocchi.push(buf);
+
+  return blocchi.map(b => ({
+    domanda: b[0].replace(/^\d+\.\s*/, ""),
+    paragrafo: b[1] || "",
+    opzioni: { A: b[3] || "", B: b[5] || "", C: b[7] || "", D: b[9] || "" },
+    answer: (b.find(x => x.startsWith("Answer:")) || "").split(":")[1]?.trim() || ""
+  }));
 }
 
 function showQuestion(i) {
   if (i < 0 || i >= domande.length) return;
-  const q = domande[i];
   currentIndex = i;
+  const q = domande[i];
   document.getElementById("domanda").textContent = q.domanda;
   document.getElementById("paragrafo").textContent = q.paragrafo;
   const opDiv = document.getElementById("opzioni");
   opDiv.innerHTML = "";
-
-  Object.entries(q.opzioni).forEach(([lett, text]) => {
+  Object.entries(q.opzioni).forEach(([lett, testo]) => {
+    if (!testo) return;
     const btn = document.createElement("button");
-    btn.className = 'opzione';
-    btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
+    btn.className = "opzione";
+    btn.innerHTML = `<strong>${lett}.</strong> ${testo}`;
     btn.onclick = () => checkAnswer(lett);
     opDiv.appendChild(btn);
   });
 }
 
-function checkAnswer(scelta) {
-  const q = domande[currentIndex];
-  if (scelta === q.answer) {
-    alert("✅ Corretto!");
-    corrette++;
-  } else {
-    alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
-    sbagliate++;
-  }
-  aggiornaStatistiche();
+function checkAnswer(sc) {
+  const giusta = domande[currentIndex].answer;
+  sc === giusta ? corrette++ : sbagliate++;
+  alert(sc === giusta ? "✅ Corretto!" : "❌ Sbagliato! Risposta giusta: " + giusta);
+  updateStats();
 }
 
-function aggiornaStatistiche() {
+function updateStats() {
   document.getElementById("corrette").textContent = corrette;
   document.getElementById("sbagliate").textContent = sbagliate;
 }
 
 function resetStatistiche() {
-  corrette = 0;
-  sbagliate = 0;
-  aggiornaStatistiche();
+  corrette = 0; sbagliate = 0; updateStats();
 }
 
-function avanti() {
-  if (currentIndex < domande.length - 1) {
-    currentIndex++;
-    showQuestion(currentIndex);
-  }
-}
-
-function indietro() {
-  if (currentIndex > 0) {
-    currentIndex--;
-    showQuestion(currentIndex);
-  }
-}
+function avanti() { if (currentIndex < domande.length - 1) showQuestion(currentIndex + 1); }
+function indietro() { if (currentIndex > 0) showQuestion(currentIndex - 1); }
 
 function startTimer() {
-  updateTimerDisplay();
+  displayTime();
   timerInterval = setInterval(() => {
-    tempoRimanente--;
-    if (tempoRimanente <= 0) {
+    if (--tempoRimanente <= 0) {
       clearInterval(timerInterval);
       alert("Tempo scaduto!");
-      // blocca quiz se vuoi, ad es. disabilita pulsanti
       disabilitaQuiz();
     }
-    updateTimerDisplay();
+    displayTime();
   }, 1000);
 }
 
-function updateTimerDisplay() {
-  const min = Math.floor(tempoRimanente / 60);
-  const sec = tempoRimanente % 60;
-  document.getElementById("timer").textContent = `Tempo rimanente: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+function displayTime() {
+  const m = String(Math.floor(tempoRimanente / 60)).padStart(2, "0");
+  const s = String(tempoRimanente % 60).padStart(2, "0");
+  document.getElementById("timer").textContent = `Tempo rimanente: ${m}:${s}`;
 }
 
 function disabilitaQuiz() {
-  document.querySelectorAll("#opzioni button").forEach(b => b.disabled = true);
-  document.querySelectorAll(".nav-btn").forEach(b => b.disabled = true);
-  document.getElementById("resetBtn").disabled = true;
+  document.querySelectorAll(".opzione, .nav-btn, #resetBtn").forEach(b => b.disabled = true);
 }
 </script>
 
