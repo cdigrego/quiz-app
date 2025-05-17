@@ -5,7 +5,77 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Quiz Viewer Protetto</title>
 <style>
-  /* (Stili come da te) */
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    font-size: 24px;
+    background: #f9f9f9;
+    max-width: 700px;
+    margin: auto;
+  }
+  #loginSection {
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+  }
+  #loginSection input {
+    font-size: 20px;
+    padding: 10px;
+    width: 80%;
+    margin-bottom: 10px;
+  }
+  #loginSection button {
+    font-size: 20px;
+    padding: 10px 20px;
+  }
+  #loginMsg {
+    color: red;
+    margin-top: 10px;
+    height: 24px;
+  }
+  #quizContainer {
+    display: none;
+  }
+  #domanda {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  #paragrafo {
+    font-style: italic;
+    margin-bottom: 20px;
+    color: #555;
+  }
+  .opzione {
+    display: block;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  button.nav-btn {
+    padding: 10px 20px;
+    font-size: 20px;
+    margin: 15px 10px 0 0;
+  }
+  #statistiche {
+    margin-top: 30px;
+    font-size: 20px;
+    color: #333;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+  }
+  #timer {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #007700;
+  }
+  #resetBtn {
+    font-size: 18px;
+    padding: 5px 15px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -18,7 +88,7 @@
   <div id="loginMsg"></div>
 </div>
 
-<div id="quizContainer" style="display:none;">
+<div id="quizContainer">
   <div id="timer">Tempo rimanente: 30:00</div>
   <div id="domanda">Caricamento domanda...</div>
   <div id="paragrafo"></div>
@@ -35,15 +105,15 @@
 </div>
 
 <script>
-const passwordBase64 = "bWlvU2VncmV0bzEyMw=="; 
-const quizTxtURL = "https://dl.dropboxusercontent.com/scl/fi/669okd50nxwwjcfokklny/quiz.txt";
+const passwordBase64 = "bWlvU2VncmV0bzEyMw=="; // 'mioSegreto123' offuscata base64
+const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
 
 let domande = [];
 let currentIndex = 0;
 let corrette = 0;
 let sbagliate = 0;
 let timerInterval;
-let tempoRimanente = 30 * 60;
+let tempoRimanente = 30 * 60; // 30 minuti in secondi
 
 function decodeBase64(str) {
   try {
@@ -67,18 +137,10 @@ function checkPassword() {
 }
 
 function loadQuiz() {
-  const quizTxtURL = decodeBase64(encodedQuizUrl);
   fetch(quizTxtURL)
-    .then(response => {
-      if (!response.ok) throw new Error("HTTP error " + response.status);
-      return response.text();
-    })
+    .then(response => response.text())
     .then(text => {
       domande = parseQuiz(text);
-      if(domande.length === 0) {
-        document.getElementById('domanda').textContent = "Nessuna domanda trovata nel quiz.";
-        return;
-      }
       showQuestion(currentIndex);
     })
     .catch(err => {
@@ -127,13 +189,11 @@ function showQuestion(i) {
   opDiv.innerHTML = "";
 
   Object.entries(q.opzioni).forEach(([lett, text]) => {
-    if(text) {
-      const btn = document.createElement("button");
-      btn.className = 'opzione';
-      btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
-      btn.onclick = () => checkAnswer(lett);
-      opDiv.appendChild(btn);
-    }
+    const btn = document.createElement("button");
+    btn.className = 'opzione';
+    btn.innerHTML = `<strong>${lett}.</strong> ${text}`;
+    btn.onclick = () => checkAnswer(lett);
+    opDiv.appendChild(btn);
   });
 }
 
@@ -181,6 +241,7 @@ function startTimer() {
     if (tempoRimanente <= 0) {
       clearInterval(timerInterval);
       alert("Tempo scaduto!");
+      // blocca quiz se vuoi, ad es. disabilita pulsanti
       disabilitaQuiz();
     }
     updateTimerDisplay();
