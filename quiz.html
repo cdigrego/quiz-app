@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Quiz Viewer</title>
 <style>
-  body{
-    font-family:Arial,Helvetica,sans-serif;
-    padding:20px;
-    font-size:24px;
-    background:#f9f9f9;
-    max-width:700px;
-    margin:auto;
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 20px;
+    font-size: 24px;
+    background: #f9f9f9;
+    max-width: 700px;
+    margin: auto;
   }
-  #domanda{font-weight:bold;margin-bottom:10px;}
-  #paragrafo{font-style:italic;margin-bottom:20px;color:#555;}
-  .opzione{display:block;padding:10px;margin:10px 0;font-size:20px;cursor:pointer;}
-  button.nav-btn{padding:10px 20px;font-size:20px;margin:15px 10px 0 0;}
-  #statistiche{margin-top:30px;font-size:20px;color:#333;border-top:1px solid #ccc;padding-top:10px;}
-  #timer{font-size:20px;font-weight:bold;margin-bottom:20px;color:#007700;}
-  #resetBtn{font-size:18px;padding:5px 15px;margin-top:10px;cursor:pointer;}
+  #domanda { font-weight: bold; margin-bottom: 10px; }
+  #paragrafo { font-style: italic; margin-bottom: 20px; color: #555; }
+  .opzione { display: block; padding: 10px; margin: 10px 0; font-size: 20px; cursor: pointer; }
+  button.nav-btn { padding: 10px 20px; font-size: 20px; margin: 15px 10px 0 0; }
+  #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
+  #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
+  #resetBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -90,25 +90,36 @@ function parseQuiz(text) {
   });
   if (buf.length) blocchi.push(buf);
 
-  return blocchi.map(b => {
+  return blocchi.map((b, idx) => {
     let domanda = b[0].replace(/^\d+\.\s*/, "");
     let paragrafo = "";
     let opzioni = { A: "", B: "", C: "", D: "" };
     let answer = "";
 
     b.forEach(line => {
-      if (/^answer:/i.test(line)) answer = line.split(":")[1].trim().toUpperCase();
-      else if (/^A\./i.test(line)) opzioni.A = line.substring(2).trim();
-      else if (/^B\./i.test(line)) opzioni.B = line.substring(2).trim();
-      else if (/^C\./i.test(line)) opzioni.C = line.substring(2).trim();
-      else if (/^D\./i.test(line)) opzioni.D = line.substring(2).trim();
+      if (/^answer:/i.test(line)) {
+        answer = line.split(":")[1].trim().toUpperCase();
+      } else if (/^A\./i.test(line)) {
+        opzioni.A = line.substring(2).trim();
+      } else if (/^B\./i.test(line)) {
+        opzioni.B = line.substring(2).trim();
+      } else if (/^C\./i.test(line)) {
+        opzioni.C = line.substring(2).trim();
+      } else if (/^D\./i.test(line)) {
+        opzioni.D = line.substring(2).trim();
+      }
     });
 
     if (b.length > 1 && !/^([ABCD]\.)/i.test(b[1]) && !/^answer:/i.test(b[1])) {
       paragrafo = b[1];
     }
 
-    return { domanda, paragrafo, opzioni, answer };
+    return {
+      domanda: `${idx + 1}. ${domanda}`,
+      paragrafo,
+      opzioni,
+      answer
+    };
   });
 }
 
@@ -116,7 +127,7 @@ function showQuestion(i) {
   if (i < 0 || i >= domande.length) return;
   currentIndex = i;
   const q = domande[i];
-  document.getElementById("domanda").textContent = `${i + 1}. ${q.domanda}`;
+  document.getElementById("domanda").textContent = q.domanda;
   document.getElementById("paragrafo").textContent = q.paragrafo;
   const opDiv = document.getElementById("opzioni");
   opDiv.innerHTML = "";
@@ -148,7 +159,9 @@ function updateStats() {
 }
 
 function resetStatistiche() {
-  corrette = 0; sbagliate = 0; updateStats();
+  corrette = 0;
+  sbagliate = 0;
+  updateStats();
 }
 
 function avanti() {
