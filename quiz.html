@@ -34,6 +34,13 @@
     font-size: 20px;
     margin: 15px 10px 0 0;
   }
+  #statistiche {
+    margin-top: 30px;
+    font-size: 20px;
+    color: #333;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+  }
 </style>
 </head>
 <body>
@@ -46,6 +53,10 @@
     <button onclick="indietro()">« Indietro</button>
     <button onclick="avanti()">Avanti »</button>
   </div>
+  <div id="statistiche">
+    ✅ Corrette: <span id="corrette">0</span> |
+    ❌ Sbagliate: <span id="sbagliate">0</span>
+  </div>
 </div>
 
 <script>
@@ -53,6 +64,8 @@ const quizTxtURL = "https://cdigrego.github.io/quiz-app/quiz.txt";
 
 let domande = [];
 let currentIndex = 0;
+let corrette = 0;
+let sbagliate = 0;
 
 fetch(quizTxtURL)
   .then(response => response.text())
@@ -117,9 +130,17 @@ function checkAnswer(scelta) {
   const q = domande[currentIndex];
   if (scelta === q.answer) {
     alert("✅ Corretto!");
+    corrette++;
   } else {
     alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
+    sbagliate++;
   }
+  aggiornaStatistiche();
+}
+
+function aggiornaStatistiche() {
+  document.getElementById("corrette").textContent = corrette;
+  document.getElementById("sbagliate").textContent = sbagliate;
 }
 
 function avanti() {
