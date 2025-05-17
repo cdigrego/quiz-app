@@ -3,157 +3,134 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quiz da file testo</title>
+<title>Quiz Viewer</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f7f7f7; border-radius: 8px; }
-  h1 { text-align: center; }
-  #domanda { font-weight: bold; font-size: 1.3em; margin-bottom: 10px; }
-  #paragrafo { font-style: italic; margin-bottom: 15px; }
-  button.opzione {
-    display: block; width: 100%; padding: 10px; margin: 8px 0; font-size: 1em;
-    cursor: pointer; border-radius: 4px; border: 1px solid #333; background: white;
-    transition: background-color 0.3s;
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    font-size: 24px;
+    background: #f9f9f9;
+    max-width: 700px;
+    margin: auto;
   }
-  button.opzione:hover { background-color: #ddd; }
-  button.opzione.correct { background-color: #4caf50; color: white; }
-  button.opzione.wrong { background-color: #f44336; color: white; }
-  #nextBtn {
-    margin-top: 20px; padding: 10px 20px; font-size: 1.1em; cursor: pointer; disabled: true;
+  #domanda {
+    font-weight: bold;
+    margin-bottom: 10px;
   }
-  #score { font-weight: bold; font-size: 1.2em; text-align: center; margin-top: 25px; }
+  #paragrafo {
+    font-style: italic;
+    margin-bottom: 20px;
+    color: #555;
+  }
+  .opzione {
+    margin: 8px 0;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 20px;
+    margin: 15px 10px 0 0;
+  }
 </style>
 </head>
 <body>
 
-<h1>Quiz da file testo</h1>
-<div id="quizBox">
-  <div id="domanda"></div>
+<div id="quizContainer">
+  <div id="domanda">Caricamento domanda...</div>
   <div id="paragrafo"></div>
-  <div id="risposte"></div>
-  <button id="nextBtn" disabled>Prossima domanda</button>
-  <div id="score"></div>
+  <div id="opzioni"></div>
+  <div>
+    <button onclick="indietro()">« Indietro</button>
+    <button onclick="avanti()">Avanti »</button>
+  </div>
 </div>
 
 <script>
-const fileTxtURL = "https://drive.google.com/uc?export=download&id=1O1UDz1atUQa4fsQChStBJ7LyPlLOMxas";
+const quizTxtURL = "https://drive.google.com/uc?export=download&id=1O1UDz1atUQa4fsQChStBJ7LyPlLOMxas";
 
-// Variabili quiz
 let domande = [];
-let current = 0;
-let score = 0;
+let currentIndex = 0;
 
-// Carica il file di testo e parsalo
-fetch(fileTxtURL)
-  .then(r => r.text())
+fetch(quizTxtURL)
+  .then(response => response.text())
   .then(text => {
     domande = parseQuiz(text);
-    mostraDomanda();
+    showQuestion(currentIndex);
   })
-  .catch(e => alert('Errore nel caricamento del quiz: ' + e));
-
-// Funzione per parsare testo quiz in array domande
-function parseQuiz(text) {
-  let lines = text.split(/\r?\n/);
-  let result = [];
-  let block = {};
-
-  for(let i=0; i<lines.length; i++) {
-    let line = lines[i].trim();
-    if (!line) continue; // salto righe vuote
-
-    // Inizio nuova domanda
-    if (/^\d+\./.test(line)) {
-      if (Object.keys(block).length) {
-        result.push(block);
-        block = {};
-      }
-      block.domanda = line;
-      block.opzioni = {};
-      continue;
-    }
-
-    // Riga paragrafo (dopo domanda, prima delle opzioni)
-    if (!block.paragrafo && !/^([A-D])\./.test(line) && !line.startsWith("Answer:")) {
-      block.paragrafo = line;
-      continue;
-    }
-
-    // Opzioni A-D
-    let optMatch = line.match(/^([A-D])\.\s*(.*)$/);
-    if (optMatch) {
-      let lettera = optMatch[1];
-      let testo = optMatch[2];
-      block.opzioni[lettera] = testo;
-      continue;
-    }
-
-    // Risposta corretta
-    if (line.startsWith("Answer:")) {
-      block.risposta = line.split(":")[1].trim();
-    }
-  }
-
-  // Ultima domanda
-  if (Object.keys(block).length) result.push(block);
-  return result;
-}
-
-// Mostra domanda corrente
-function mostraDomanda() {
-  let q = domande[current];
-  document.getElementById('domanda').textContent = q.domanda || '';
-  document.getElementById('paragrafo').textContent = q.paragrafo || '';
-
-  const risposteDiv = document.getElementById('risposte');
-  risposteDiv.innerHTML = '';
-
-  for (const [lettera, testo] of Object.entries(q.opzioni)) {
-    const btn = document.createElement('button');
-    btn.className = 'opzione';
-    btn.textContent = lettera + '. ' + testo;
-    btn.dataset.lettera = lettera;
-    btn.onclick = () => checkRisposta(btn);
-    risposteDiv.appendChild(btn);
-  }
-
-  document.getElementById('nextBtn').disabled = true;
-  document.getElementById('score').textContent = '';
-}
-
-// Controlla risposta cliccata
-function checkRisposta(button) {
-  const lettera = button.dataset.lettera;
-  const q = domande[current];
-  const correct = q.risposta;
-
-  // Blocca tutti i bottoni
-  const btns = document.querySelectorAll('button.opzione');
-  btns.forEach(b => {
-    b.disabled = true;
-    if (b.dataset.lettera === correct) {
-      b.classList.add('correct');
-    }
-    if (b === button && lettera !== correct) {
-      b.classList.add('wrong');
-    }
+  .catch(err => {
+    document.getElementById('domanda').textContent = "Errore nel caricamento quiz.";
+    console.error(err);
   });
 
-  if (lettera === correct) {
-    score++;
+function parseQuiz(text) {
+  let righe = text.split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
+  let blocchi = [];
+  let buffer = [];
+  
+  for (let r of righe) {
+    if (/^\d+\./.test(r) && buffer.length > 0) {
+      blocchi.push(buffer);
+      buffer = [r];
+    } else {
+      buffer.push(r);
+    }
   }
+  if (buffer.length > 0) blocchi.push(buffer);
 
-  document.getElementById('nextBtn').disabled = false;
+  return blocchi.map(b => {
+    return {
+      domanda: b[0].replace(/^\d+\.\s*/, ""),
+      paragrafo: b[1] || "",
+      opzioni: {
+        A: b[3] || "",
+        B: b[4] || "",
+        C: b[5] || "",
+        D: b[6] || ""
+      },
+      answer: (b.find(r => r.startsWith("Answer:")) || "").split(":")[1]?.trim() || ""
+    };
+  });
 }
 
-// Avanti domanda
-document.getElementById('nextBtn').onclick = () => {
-  current++;
-  if (current < domande.length) {
-    mostraDomanda();
-  } else {
-    document.getElementById('quizBox').innerHTML = `<h2>Quiz completato!</h2><p>Hai risposto correttamente a ${score} su ${domande.length} domande.</p>`;
+function showQuestion(i) {
+  if (i < 0 || i >= domande.length) return;
+  const q = domande[i];
+  document.getElementById('domanda').textContent = q.domanda;
+  document.getElementById('paragrafo').textContent = q.paragrafo;
+
+  let opzioniDiv = document.getElementById('opzioni');
+  opzioniDiv.innerHTML = "";
+
+  for (const [lettera, testo] of Object.entries(q.opzioni)) {
+    let btn = document.createElement('button');
+    btn.textContent = lettera + ". " + testo;
+    btn.onclick = () => checkAnswer(lettera);
+    btn.className = 'opzione';
+    opzioniDiv.appendChild(btn);
   }
-};
+}
+
+function checkAnswer(scelta) {
+  const q = domande[currentIndex];
+  if (scelta === q.answer) {
+    alert("✅ Corretto!");
+  } else {
+    alert("❌ Sbagliato! La risposta giusta è: " + q.answer);
+  }
+}
+
+function avanti() {
+  if (currentIndex < domande.length - 1) {
+    currentIndex++;
+    showQuestion(currentIndex);
+  }
+}
+
+function indietro() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    showQuestion(currentIndex);
+  }
+}
 </script>
 
 </body>
