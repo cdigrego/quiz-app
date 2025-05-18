@@ -20,6 +20,7 @@
     #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
     #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
     #resetBtn, #ripassoBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
+    #gotoInput { font-size: 18px; width: 70px; margin-right: 10px; }
   </style>
 </head>
 <body>
@@ -32,6 +33,11 @@
   <div>
     <button class="nav-btn" onclick="indietro()">« Indietro</button>
     <button class="nav-btn" onclick="avanti()">Avanti »</button>
+  </div>
+  <div style="margin-top: 15px;">
+    Vai alla domanda n.
+    <input type="number" id="gotoInput" min="1" />
+    <button class="nav-btn" onclick="vaiAllaDomanda()">Vai</button>
   </div>
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
@@ -179,6 +185,17 @@ function iniziaRipasso() {
   inRipasso = true;
   currentIndex = 0;
   showQuestion(0);
+}
+
+function vaiAllaDomanda() {
+  const input = document.getElementById("gotoInput").value;
+  const num = parseInt(input);
+  const source = inRipasso ? domandeSbagliate : domande;
+  if (!isNaN(num) && num >= 1 && num <= source.length) {
+    showQuestion(num - 1);
+  } else {
+    alert("Inserisci un numero valido tra 1 e " + source.length);
+  }
 }
 
 function startTimer() {
