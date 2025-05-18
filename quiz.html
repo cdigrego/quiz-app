@@ -20,24 +20,26 @@
     #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
     #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
     #resetBtn, #ripassoBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
-    #gotoInput { font-size: 18px; width: 70px; margin-right: 10px; }
+    #impostazioni { margin-bottom: 20px; font-size: 18px; }
+    #vaiBtn { font-size: 18px; margin-left: 10px; padding: 5px 15px; cursor: pointer; }
   </style>
 </head>
 <body>
 
 <div id="quizContainer">
-  <div id="timer">Tempo rimanente: 30:00</div>
-  <div id="domanda">Caricamento domanda...</div>
+  <div id="impostazioni">
+    <label><input type="checkbox" id="shuffleDomande" /> Mischia domande</label>
+    <label style="margin-left: 20px;"><input type="checkbox" id="shuffleRisposte" /> Mischia risposte</label>
+    <button id="vaiBtn" onclick="iniziaQuiz()">Inizia quiz</button>
+  </div>
+
+  <div id="timer" style="display:none;">Tempo rimanente: 30:00</div>
+  <div id="domanda"></div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
   <div>
     <button class="nav-btn" onclick="indietro()">« Indietro</button>
     <button class="nav-btn" onclick="avanti()">Avanti »</button>
-  </div>
-  <div style="margin-top: 15px;">
-    Vai alla domanda n.
-    <input type="number" id="gotoInput" min="1" />
-    <button class="nav-btn" onclick="vaiAllaDomanda()">Vai</button>
   </div>
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
@@ -58,17 +60,20 @@ let sbagliate = 0;
 let tempoRimanente = 30 * 60;
 let timerInterval;
 let inRipasso = false;
+let shuffleRisposte = false;
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadQuiz();
-  startTimer();
-});
-
-function loadQuiz() {
+function iniziaQuiz() {
+  document.getElementById("vaiBtn").disabled = true;
+  shuffleRisposte = document.getElementById("shuffleRisposte").checked;
   fetch(quizTxtURL)
     .then(r => r.text())
     .then(text => {
       domande = parseQuiz(text);
+      if (document.getElementById("shuffleDomande").checked) {
+        shuffleArray(domande);
+      }
+      startTimer();
+      document.getElementById("timer").style.display = "block";
       showQuestion(0);
     })
     .catch(err => {
@@ -126,21 +131,44 @@ function showQuestion(i) {
   const q = source[i];
   document.getElementById("domanda").textContent = `${i + 1}. ${q.domanda}`;
   document.getElementById("paragrafo").textContent = q.paragrafo;
+
+  let opzioniArray = Object.entries(q.opzioni)
+    .filter(([lett, testo]) => testo)
+    .map(([lett, testo]) => ({ label: lett.toUpperCase(), testo }));
+
+  if (shuffleRisposte) shuffleArray(opzioniArray);
+
+  const lettere = ["A", "B", "C", "D"];
+  let nuovaMappa = {};
+  let nuovaRisposta = "";
+
+  opzioniArray.forEach((op, idx) => {
+    const nuovaLettera = lettere[idx];
+    nuovaMappa[nuovaLettera] = op.testo;
+    if (op.label === q.answer) {
+      nuovaRisposta = nuovaLettera;
+    }
+  });
+
+  q.shuffledOptions = nuovaMappa;
+  q.shuffledAnswer = nuovaRisposta;
+
   const opDiv = document.getElementById("opzioni");
   opDiv.innerHTML = "";
-  Object.entries(q.opzioni).forEach(([lett, testo]) => {
-    if (!testo) return;
+  Object.entries(nuovaMappa).forEach(([lett, testo]) => {
     const btn = document.createElement("button");
     btn.className = "opzione";
     btn.innerHTML = `<strong>${lett}.</strong> ${testo}`;
-    btn.onclick = () => checkAnswer(lett.toUpperCase());
+    btn.onclick = () => checkAnswer(lett);
     opDiv.appendChild(btn);
   });
 }
 
 function checkAnswer(sc) {
   const source = inRipasso ? domandeSbagliate : domande;
-  const giusta = source[currentIndex].answer;
+  const domandaCorrente = source[currentIndex];
+  const giusta = domandaCorrente.shuffledAnswer || domandaCorrente.answer;
+
   if (sc === giusta) {
     corrette++;
     alert("✅ Corretto!");
@@ -148,7 +176,7 @@ function checkAnswer(sc) {
     sbagliate++;
     alert("❌ Sbagliato! Risposta giusta: " + giusta);
     if (!inRipasso) {
-      domandeSbagliate.push(source[currentIndex]);
+      domandeSbagliate.push(domandaCorrente);
     }
   }
   updateStats();
@@ -187,17 +215,6 @@ function iniziaRipasso() {
   showQuestion(0);
 }
 
-function vaiAllaDomanda() {
-  const input = document.getElementById("gotoInput").value;
-  const num = parseInt(input);
-  const source = inRipasso ? domandeSbagliate : domande;
-  if (!isNaN(num) && num >= 1 && num <= source.length) {
-    showQuestion(num - 1);
-  } else {
-    alert("Inserisci un numero valido tra 1 e " + source.length);
-  }
-}
-
 function startTimer() {
   displayTime();
   timerInterval = setInterval(() => {
@@ -218,6 +235,13 @@ function displayTime() {
 
 function disabilitaQuiz() {
   document.querySelectorAll(".opzione, .nav-btn, #resetBtn, #ripassoBtn").forEach(b => b.disabled = true);
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 }
 </script>
 
