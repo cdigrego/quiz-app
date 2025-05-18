@@ -219,18 +219,32 @@ function checkAnswer(sc) {
   const domandaCorrente = source[currentIndex];
   const giusta = domandaCorrente.shuffledAnswer || domandaCorrente.answer;
 
+  const bottoni = document.querySelectorAll(".opzione");
+
+  bottoni.forEach(b => {
+    const lettera = b.innerText.trim().charAt(0);
+    b.disabled = true;
+    if (lettera === giusta) {
+      b.style.backgroundColor = "#c8e6c9"; // verde chiaro
+      b.style.borderColor = "#2e7d32";
+    } else if (lettera === sc) {
+      b.style.backgroundColor = "#ffcdd2"; // rosso chiaro
+      b.style.borderColor = "#c62828";
+    }
+  });
+
   if (sc === giusta) {
     corrette++;
-    alert("✅ Corretto!");
   } else {
     sbagliate++;
-    alert("❌ Sbagliato! Risposta giusta: " + giusta);
     if (!inRipasso) {
       domandeSbagliate.push(domandaCorrente);
     }
   }
+
   updateStats();
 }
+
 
 function updateStats() {
   document.getElementById("corrette").textContent = corrette;
