@@ -15,13 +15,59 @@
     }
     #domanda { font-weight: bold; margin-bottom: 10px; }
     #paragrafo { font-style: italic; margin-bottom: 20px; color: #555; }
-    .opzione { display: block; padding: 10px; margin: 10px 0; font-size: 20px; cursor: pointer; }
-    button.nav-btn { padding: 10px 20px; font-size: 20px; margin: 15px 10px 0 0; }
-    #statistiche { margin-top: 30px; font-size: 20px; color: #333; border-top: 1px solid #ccc; padding-top: 10px; }
-    #timer { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #007700; }
-    #resetBtn, #ripassoBtn { font-size: 18px; padding: 5px 15px; margin-top: 10px; cursor: pointer; }
-    #impostazioni { margin-bottom: 20px; font-size: 18px; }
-    #vaiBtn { font-size: 18px; margin-left: 10px; padding: 5px 15px; cursor: pointer; }
+    .opzione { 
+      display: block; 
+      padding: 10px; 
+      margin: 10px 0; 
+      font-size: 20px; 
+      cursor: pointer; 
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: white;
+      transition: background-color 0.3s;
+    }
+    .opzione:hover:not(:disabled) {
+      background-color: #e0f7fa;
+    }
+    button.nav-btn, #resetBtn, #ripassoBtn, #terminaBtn, #vaiBtn {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin: 15px 10px 0 0;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #1976d2;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button.nav-btn:hover:not(:disabled), 
+    #resetBtn:hover:not(:disabled), 
+    #ripassoBtn:hover:not(:disabled), 
+    #terminaBtn:hover:not(:disabled),
+    #vaiBtn:hover:not(:disabled) {
+      background-color: #1565c0;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #statistiche { 
+      margin-top: 30px; 
+      font-size: 20px; 
+      color: #333; 
+      border-top: 1px solid #ccc; 
+      padding-top: 10px; 
+    }
+    #timer { 
+      font-size: 20px; 
+      font-weight: bold; 
+      margin-bottom: 20px; 
+      color: #007700; 
+    }
+    #impostazioni { 
+      margin-bottom: 20px; 
+      font-size: 18px; 
+    }
   </style>
 </head>
 <body>
@@ -37,16 +83,20 @@
   <div id="domanda"></div>
   <div id="paragrafo"></div>
   <div id="opzioni"></div>
+  
   <div>
     <button class="nav-btn" onclick="indietro()">« Indietro</button>
     <button class="nav-btn" onclick="avanti()">Avanti »</button>
   </div>
+
   <div id="statistiche">
     ✅ Corrette: <span id="corrette">0</span> |
     ❌ Sbagliate: <span id="sbagliate">0</span>
   </div>
+
   <button id="resetBtn" onclick="resetStatistiche()">Reset Statistiche</button>
   <button id="ripassoBtn" onclick="iniziaRipasso()">Ripasso</button>
+  <button id="terminaBtn" onclick="terminaQuiz()">Termina Quiz</button>
 </div>
 
 <script>
@@ -234,7 +284,13 @@ function displayTime() {
 }
 
 function disabilitaQuiz() {
-  document.querySelectorAll(".opzione, .nav-btn, #resetBtn, #ripassoBtn").forEach(b => b.disabled = true);
+  document.querySelectorAll(".opzione, .nav-btn, #resetBtn, #ripassoBtn, #terminaBtn").forEach(b => b.disabled = true);
+}
+
+function terminaQuiz() {
+  clearInterval(timerInterval);
+  disabilitaQuiz();
+  alert(`Quiz terminato!\nCorrette: ${corrette}\nSbagliate: ${sbagliate}`);
 }
 
 function shuffleArray(array) {
